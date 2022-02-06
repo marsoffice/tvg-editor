@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "MarsOffice.Tvg.Editor": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7006"
+    }
+  }
+}

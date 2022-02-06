@@ -1,0 +1,199 @@
+name: tvg-editor
+on:
+  push:
+    branches: [develop, master]
+  pull_request:
+    branches: [develop]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  GH_USER: ${{ secrets.GH_USER }}
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+jobs:
+  build_nuget:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: install gv
+        uses: gittools/actions/gitversion/setup@v0.9.7
+        with:
+          versionSpec: "5.5.0"
+
+      - name: execute gv
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v0.9.7
+        with:
+          useConfigFile: true
+          configFilePath: "GitVersion.yml"
+
+      - name: setup net 6
+        uses: actions/setup-dotnet@v1.8.2
+        with:
+          dotnet-version: "6.0.x"
+          source-url: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+        env:
+          NUGET_AUTH_TOKEN: "%NUGET_AUTH_TOKEN%"
+
+      - name: cache nuget
+        uses: actions/cache@v2
+        id: cache-nuget
+        env:
+          cache-name: cache-nuget
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ github.workflow }}-build-${{ secrets.CACHE_VERSION }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-${{ github.workflow }}-build-${{ secrets.CACHE_VERSION }}-
+
+      - name: dotnet build
+        run: dotnet build -c Release -p:PackageVersion=${{ steps.gitversion.outputs.semVer }} MarsOffice.Tvg.Editor.sln
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: dotnet pack
+        run: dotnet pack -c Release -p:PackageVersion=${{ steps.gitversion.outputs.semVer }} -o ./dist --no-build MarsOffice.Tvg.Editor.sln
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v2.2.4
+        if: ${{ success() && github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+        with:
+          name: dist_nuget
+          path: ./dist
+
+  nuget_push:
+    runs-on: ubuntu-latest
+    if: ${{ success() && github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || github.ref == 'refs/heads/develop') }}
+    needs: [build_nuget]
+    steps:
+      - name: download artifact
+        uses: actions/download-artifact@v2.0.10
+        with:
+          name: "dist_nuget"
+          path: .
+
+      - name: setup net 6
+        uses: actions/setup-dotnet@v1.8.2
+        with:
+          dotnet-version: "6.0.x"
+          source-url: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+        env:
+          NUGET_AUTH_TOKEN: "%NUGET_AUTH_TOKEN%"
+
+      - name: dotnet nuget push
+        run: dotnet nuget push *.nupkg --no-symbols --skip-duplicate
+        continue-on-error: true
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: setup net 6
+        uses: actions/setup-dotnet@v1.8.2
+        with:
+          dotnet-version: "6.0.x"
+          source-url: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+        env:
+          NUGET_AUTH_TOKEN: "%NUGET_AUTH_TOKEN%"
+
+      - name: cache nuget
+        uses: actions/cache@v2
+        id: cache-nuget
+        env:
+          cache-name: cache-nuget
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ github.workflow }}-build-${{ secrets.CACHE_VERSION }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-${{ github.workflow }}-build-${{ secrets.CACHE_VERSION }}-
+
+      - name: dotnet publish
+        run: |
+          dotnet publish -c Release -o ./dist ./MarsOffice.Tvg.Editor
+
+        env:
+          NUGET_AUTH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v2.2.4
+        if: ${{ success() && github.event_name != 'pull_request' && (github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/master') }}
+        with:
+          name: dist
+          path: ./dist
+
+  deploy_stg_westeurope:
+    if: ${{ success() && github.event_name != 'pull_request' && github.ref == 'refs/heads/develop' }}
+    runs-on: ubuntu-latest
+    needs: [build]
+    environment: stg
+    name: deploy stg westeurope
+    steps:
+      - name: download artifact
+        uses: actions/download-artifact@v2.0.10
+        with:
+          name: "dist"
+          path: ./dist
+
+      - name: az login
+        uses: Azure/login@v1
+        with:
+          creds: |
+            {
+              "clientId": "${{ secrets.AZURE_CLIENT_ID }}",
+              "clientSecret": "${{ secrets.AZURE_CLIENT_SECRET }}",
+              "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+              "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
+            }
+
+      - name: deploy
+        uses: Azure/functions-action@v1.3.2
+        with:
+          package: ./dist
+          app-name: func-${{ github.workflow }}-westeurope-stg
+
+  
+
+  deploy_prod_westeurope:
+    if: ${{ success() && github.event_name != 'pull_request' && github.ref == 'refs/heads/master' }}
+    runs-on: ubuntu-latest
+    needs: [build]
+    environment: prod
+    name: deploy prod westeurope
+    steps:
+      - name: Download a Build Artifact
+        uses: actions/download-artifact@v2.0.10
+        with:
+          name: "dist"
+          path: ./dist
+
+      - name: az login
+        uses: Azure/login@v1
+        with:
+          creds: |
+            {
+              "clientId": "${{ secrets.AZURE_CLIENT_ID }}",
+              "clientSecret": "${{ secrets.AZURE_CLIENT_SECRET }}",
+              "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}",
+              "tenantId": "${{ secrets.AZURE_TENANT_ID }}"
+            }
+
+      - name: deploy
+        uses: Azure/functions-action@v1.3.2
+        with:
+          package: ./dist
+          app-name: func-${{ github.workflow }}-westeurope-prod
