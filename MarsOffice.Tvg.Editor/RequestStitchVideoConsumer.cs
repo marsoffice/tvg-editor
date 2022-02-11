@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using MarsOffice.Tvg.Editor.Abstractions;
 using Microsoft.Azure.Management.Media;
+using Microsoft.Azure.Management.Media.Models;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -29,7 +31,11 @@ namespace MarsOffice.Tvg.Editor
             try
             {
                 var client = await CreateMediaServicesClientAsync();
-                client.ApiVersion.ToString();
+                client.LongRunningOperationRetryTimeout = 2;
+
+                var transform = await CreateOrUpdateTransform(client, request);
+
+                var job = await CreateJob(client, request);
             } catch (Exception e)
             {
                 log.LogError(e, "Function threw an exception");
@@ -43,6 +49,44 @@ namespace MarsOffice.Tvg.Editor
                 });
                 await stitchVideoResponseQueue.FlushAsync();
             }
+        }
+
+        private async Task<Job> CreateJob(IAzureMediaServicesClient client, RequestStitchVideo request)
+        {
+            var inputs = new List<JobInput>();
+            var outputs = new List<JobOutput>(); // TODO
+
+            var job = await client.Jobs.CreateAsync(
+                _config["mediaservicesresourcegroupname"],
+                _config["mediaservicesaccountname"],
+                "ZikMashTransform",
+                request.VideoId,
+                new Job
+                {
+                    Input = new JobInputs(inputs: inputs),
+                    Outputs = outputs,
+                    CorrelationData = new Dictionary<string, string>
+                    {
+                            {"VideoId", request.VideoId },
+                            {"JobId", request.JobId },
+                            {"UserId", request.UserId },
+                            {"UserEmail", request.UserEmail }
+                    }
+                }
+             );
+            return job;
+        }
+
+        private async Task<Transform> CreateOrUpdateTransform(IAzureMediaServicesClient client, RequestStitchVideo request)
+        {
+            var outputs = new List<TransformOutput>();
+            // TODO
+            return await client.Transforms.CreateOrUpdateAsync(
+                _config["mediaservicesresourcegroupname"],
+                _config["mediaservicesaccountname"],
+                "ZikMashTransform",
+                outputs
+                );
         }
 
         private async Task<ServiceClientCredentials> GetCredentialsAsync()
