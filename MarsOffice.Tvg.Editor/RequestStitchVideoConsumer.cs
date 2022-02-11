@@ -24,7 +24,7 @@ namespace MarsOffice.Tvg.Editor
 
         [FunctionName("RequestStitchVideoConsumer")]
         public async Task Run(
-            [QueueTrigger("request-stitch-video", Connection = "localsaconnectionstring")]RequestStitchVideo request,
+            [QueueTrigger("request-stitch-video", Connection = "localsaconnectionstring")] RequestStitchVideo request,
             [Queue("stitch-video-response", Connection = "localsaconnectionstring")] IAsyncCollector<StitchVideoResponse> stitchVideoResponseQueue,
             ILogger log)
         {
@@ -36,10 +36,12 @@ namespace MarsOffice.Tvg.Editor
                 var transform = await CreateOrUpdateTransform(client, request);
 
                 var job = await CreateJob(client, request);
-            } catch (Exception e)
+            }
+            catch (Exception e)
             {
                 log.LogError(e, "Function threw an exception");
-                await stitchVideoResponseQueue.AddAsync(new StitchVideoResponse { 
+                await stitchVideoResponseQueue.AddAsync(new StitchVideoResponse
+                {
                     Error = e.Message,
                     JobId = request.JobId,
                     Success = false,
@@ -53,8 +55,14 @@ namespace MarsOffice.Tvg.Editor
 
         private async Task<Job> CreateJob(IAzureMediaServicesClient client, RequestStitchVideo request)
         {
-            var inputs = new List<JobInput>();
-            var outputs = new List<JobOutput>(); // TODO
+            var inputs = new List<JobInput> { 
+                new JobInputAsset("videobackground"),
+                new JobInputAsset("audiobackground"),
+                new JobInputAsset("speech")
+            };
+            var outputs = new List<JobOutput> { 
+                new JobOutputAsset("final")
+            };
 
             var job = await client.Jobs.CreateAsync(
                 _config["mediaservicesresourcegroupname"],
@@ -79,8 +87,52 @@ namespace MarsOffice.Tvg.Editor
 
         private async Task<Transform> CreateOrUpdateTransform(IAzureMediaServicesClient client, RequestStitchVideo request)
         {
-            var outputs = new List<TransformOutput>();
-            // TODO
+            var overlays = new List<Overlay>
+                            {
+                                new VideoOverlay
+                                {
+                                    InputLabel = "textbox",
+                                    Position = new Rectangle( "900","600")
+                                }
+                            };
+            var outputs = new List<TransformOutput> {
+                new TransformOutput
+                {
+                    Preset = new StandardEncoderPreset
+                    {
+                        Filters = new Filters
+                        {
+                            Overlays = overlays
+                        },
+                        Codecs = new List<Codec>
+                        {
+                            new AacAudio
+                            {
+                            },
+                            new H264Video
+                            {
+                                Layers = new List<H264Layer>
+                                {
+                                    new H264Layer
+                                    {
+                                        Profile = H264VideoProfile.Auto,
+                                        Bitrate = 1000000,
+                                        Width = "1080",
+                                        Height = "1920"
+                                    }
+                                }
+                            }
+                        },
+                        Formats = new List<Format>
+                        {
+                            new Mp4Format
+                            {
+                                FilenamePattern = "{Basename}{Extension}",
+                            }
+                        }
+                    }
+                }
+            };
             return await client.Transforms.CreateOrUpdateAsync(
                 _config["mediaservicesresourcegroupname"],
                 _config["mediaservicesaccountname"],
