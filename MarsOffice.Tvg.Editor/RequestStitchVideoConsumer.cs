@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using MarsOffice.Tvg.Editor.Abstractions;
 using Microsoft.Azure.Management.Media;
@@ -58,13 +59,22 @@ namespace MarsOffice.Tvg.Editor
 
         private async Task<Job> CreateJob(IAzureMediaServicesClient client, RequestStitchVideo request)
         {
+            await client.Assets.CreateOrUpdateAsync(_config["mediaservicesresourcegroupname"], _config["mediaservicesaccountname"], 
+                request.VideoId + "_VideoBackground", new Asset(name: request.VideoBackgroundFileLink.Split("/").Last(), container: "videos"));
+            await client.Assets.CreateOrUpdateAsync(_config["mediaservicesresourcegroupname"], _config["mediaservicesaccountname"],
+                request.VideoId + "_AudioBackground", new Asset(name: request.AudioBackgroundFileLink.Split("/").Last(), container: "audio"));
+            await client.Assets.CreateOrUpdateAsync(_config["mediaservicesresourcegroupname"], _config["mediaservicesaccountname"],
+                request.VideoId + "_Speech", new Asset(name: $"{request.VideoId}/tts.mp3", container: "jobsdata"));
+            await client.Assets.CreateOrUpdateAsync(_config["mediaservicesresourcegroupname"], _config["mediaservicesaccountname"],
+                request.VideoId + "_Output", new Asset(name: $"{request.VideoId}/final.mp4", container: "editor"));
+
             var inputs = new List<JobInput> {
-                new JobInputAsset(request.VideoBackgroundFileLink),
-                new JobInputAsset(request.AudioBackgroundFileLink),
-                new JobInputAsset(request.VoiceFileLink)
+                new JobInputAsset(request.VideoId + "_VideoBackground"),
+                new JobInputAsset(request.VideoId + "_AudioBackground"),
+                new JobInputAsset(request.VideoId + "_Speech")
             };
             var outputs = new List<JobOutput> {
-                new JobOutputAsset($"jobsdata/{request.JobId}/final.mp4")
+                new JobOutputAsset(request.VideoId + "_Output")
             };
 
             var job = await client.Jobs.CreateAsync(
@@ -94,7 +104,7 @@ namespace MarsOffice.Tvg.Editor
                             {
                                 new VideoOverlay
                                 {
-                                    InputLabel = request.VideoBackgroundFileLink,
+                                    InputLabel = request.VideoId + "_VideoBackground",
                                     Position = new Rectangle("0", "0", "1080", "1920"),
                                     AudioGainLevel = 0,
                                     CropRectangle = new Rectangle("0", "0", "1080", "1920")
@@ -111,13 +121,13 @@ namespace MarsOffice.Tvg.Editor
             overlays.Add(new AudioOverlay
             {
                 AudioGainLevel = 1,
-                InputLabel = $"jobsdata/{request.JobId}/tts.mp3"
+                InputLabel = request.VideoId + "_Speech"
             });
 
             overlays.Add(new AudioOverlay
             {
                 AudioGainLevel = (request.AudioBackgroundVolumeInPercent ?? 20d) / 100d,
-                InputLabel = request.AudioBackgroundFileLink
+                InputLabel = request.VideoId + "_AudioBackground"
             });
 
             var outputs = new List<TransformOutput> {
