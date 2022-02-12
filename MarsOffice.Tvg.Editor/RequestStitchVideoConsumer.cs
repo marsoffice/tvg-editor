@@ -92,9 +92,21 @@ namespace MarsOffice.Tvg.Editor
                                 new VideoOverlay
                                 {
                                     InputLabel = "textbox",
-                                    Position = new Rectangle( "900","600")
+                                    Position = new Rectangle("10%", "50%", "80%", "50%"),
                                 }
                             };
+
+            overlays.Add(new AudioOverlay { 
+                AudioGainLevel = 1,
+                InputLabel = "speech"
+            });
+
+            overlays.Add(new AudioOverlay
+            {
+                AudioGainLevel = 0.4,
+                InputLabel = "audiobackground"
+            });
+
             var outputs = new List<TransformOutput> {
                 new TransformOutput
                 {
