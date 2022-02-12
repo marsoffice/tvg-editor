@@ -101,7 +101,7 @@ namespace MarsOffice.Tvg.Editor
                                     InputLabel = "textbox",
                                     Position = new Rectangle("10%", "50%", "80%", "50%"),
                                     Opacity = request.TextBoxOpacity,
-                                    CropRectangle = new Rectangle("0", "0", "1080", "1920")
+                                    CropRectangle = new Rectangle("0", "0", "1080", "1920") // replace
                                 }
                             };
 
