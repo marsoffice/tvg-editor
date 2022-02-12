@@ -33,9 +33,12 @@ namespace MarsOffice.Tvg.Editor
                 var client = await CreateMediaServicesClientAsync();
                 client.LongRunningOperationRetryTimeout = 2;
 
+
                 var transform = await CreateOrUpdateTransform(client, request);
 
                 var job = await CreateJob(client, request);
+
+                job.Validate();
             }
             catch (Exception e)
             {
@@ -67,7 +70,7 @@ namespace MarsOffice.Tvg.Editor
             var job = await client.Jobs.CreateAsync(
                 _config["mediaservicesresourcegroupname"],
                 _config["mediaservicesaccountname"],
-                "ZikMashTransform",
+                request.JobId,
                 request.VideoId,
                 new Job
                 {
@@ -158,7 +161,7 @@ namespace MarsOffice.Tvg.Editor
             return await client.Transforms.CreateOrUpdateAsync(
                 _config["mediaservicesresourcegroupname"],
                 _config["mediaservicesaccountname"],
-                "ZikMashTransform",
+                request.JobId,
                 outputs
                 );
         }
