@@ -116,7 +116,7 @@ namespace MarsOffice.Tvg.Editor
 
             overlays.Add(new AudioOverlay
             {
-                AudioGainLevel = request.AudioBackgroundVolumeInPercent / 100d,
+                AudioGainLevel = (request.AudioBackgroundVolumeInPercent ?? 20d) / 100d,
                 InputLabel = request.AudioBackgroundFileLink
             });
 
