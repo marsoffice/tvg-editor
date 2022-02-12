@@ -59,12 +59,12 @@ namespace MarsOffice.Tvg.Editor
         private async Task<Job> CreateJob(IAzureMediaServicesClient client, RequestStitchVideo request)
         {
             var inputs = new List<JobInput> {
-                new JobInputAsset("videobackground"),
-                new JobInputAsset("audiobackground"),
-                new JobInputAsset("speech")
+                new JobInputAsset(request.VideoBackgroundFileLink),
+                new JobInputAsset(request.AudioBackgroundFileLink),
+                new JobInputAsset(request.VoiceFileLink)
             };
             var outputs = new List<JobOutput> {
-                new JobOutputAsset("final")
+                new JobOutputAsset($"jobsdata/{request.JobId}/final.mp4")
             };
 
             var job = await client.Jobs.CreateAsync(
@@ -94,30 +94,30 @@ namespace MarsOffice.Tvg.Editor
                             {
                                 new VideoOverlay
                                 {
-                                    InputLabel = "videobackground",
+                                    InputLabel = request.VideoBackgroundFileLink,
                                     Position = new Rectangle("0", "0", "1080", "1920"),
                                     AudioGainLevel = 0,
                                     CropRectangle = new Rectangle("0", "0", "1080", "1920")
                                 },
-                                new VideoOverlay
-                                {
-                                    InputLabel = "textbox",
-                                    Position = new Rectangle("10%", "50%", "80%", "50%"),
-                                    Opacity = request.TextBoxOpacity,
-                                    CropRectangle = new Rectangle("0", "0", "1080", "1920") // replace
-                                }
+                                //new VideoOverlay
+                                //{
+                                //    InputLabel = "textbox",
+                                //    Position = new Rectangle("10%", "50%", "80%", "50%"),
+                                //    Opacity = request.TextBoxOpacity,
+                                //    CropRectangle = new Rectangle("0", "0", "1080", "1920") // replace
+                                //}
                             };
 
             overlays.Add(new AudioOverlay
             {
                 AudioGainLevel = 1,
-                InputLabel = "speech"
+                InputLabel = $"jobsdata/{request.JobId}/tts.mp3"
             });
 
             overlays.Add(new AudioOverlay
             {
-                AudioGainLevel = 0.4,
-                InputLabel = "audiobackground"
+                AudioGainLevel = request.AudioBackgroundVolumeInPercent / 100d,
+                InputLabel = request.AudioBackgroundFileLink
             });
 
             var outputs = new List<TransformOutput> {
