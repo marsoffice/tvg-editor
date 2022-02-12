@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using MarsOffice.Tvg.Editor.Abstractions;
 using Microsoft.Azure.Management.Media;
 using Microsoft.Azure.Management.Media.Models;
+using Microsoft.Azure.Storage;
+using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -34,7 +36,7 @@ namespace MarsOffice.Tvg.Editor
                 var client = await CreateMediaServicesClientAsync();
                 client.LongRunningOperationRetryTimeout = 2;
 
-
+                await CreateOutputBlob(request);
                 var transform = await CreateOrUpdateTransform(client, request);
 
                 var job = await CreateJob(client, request);
@@ -57,24 +59,53 @@ namespace MarsOffice.Tvg.Editor
             }
         }
 
+        private async Task CreateOutputBlob(RequestStitchVideo request)
+        {
+            var cloudStorageAccount = CloudStorageAccount.Parse(_config["localsaconnectionstring"]);
+            var blobClient = cloudStorageAccount.CreateCloudBlobClient();
+            var blobContainerReference = blobClient.GetContainerReference("editor");
+#if DEBUG
+            await blobContainerReference.CreateIfNotExistsAsync();
+#endif
+            var bRef = blobContainerReference.GetBlockBlobReference($"{request.VideoId}/final.mp4");
+            await bRef.UploadTextAsync("");
+        }
+
         private async Task<Job> CreateJob(IAzureMediaServicesClient client, RequestStitchVideo request)
         {
-            await client.Assets.CreateOrUpdateAsync(_config["mediaservicesresourcegroupname"], _config["mediaservicesaccountname"], 
-                request.VideoId + "_VideoBackground", new Asset(name: request.VideoBackgroundFileLink.Split("/").Last(), container: "videos"));
+            Job existingJob = null;
+
+            try
+            {
+                existingJob = await client.Jobs.GetAsync(_config["mediaservicesresourcegroupname"],
+            _config["mediaservicesaccountname"], request.JobId, request.VideoId);
+            } catch (Exception)
+            {
+
+            }
+
+            if (existingJob != null)
+            {
+                await client.Jobs.DeleteAsync(_config["mediaservicesresourcegroupname"],
+                    _config["mediaservicesaccountname"], request.JobId, request.VideoId);
+            }
+
             await client.Assets.CreateOrUpdateAsync(_config["mediaservicesresourcegroupname"], _config["mediaservicesaccountname"],
-                request.VideoId + "_AudioBackground", new Asset(name: request.AudioBackgroundFileLink.Split("/").Last(), container: "audio"));
+                request.VideoId + "_VideoBackground", new Asset(container: request.VideoBackgroundFileLink.Split("/").First()));
             await client.Assets.CreateOrUpdateAsync(_config["mediaservicesresourcegroupname"], _config["mediaservicesaccountname"],
-                request.VideoId + "_Speech", new Asset(name: $"{request.VideoId}/tts.mp3", container: "jobsdata"));
+                request.VideoId + "_AudioBackground", new Asset(container: request.AudioBackgroundFileLink.Split("/").First()));
             await client.Assets.CreateOrUpdateAsync(_config["mediaservicesresourcegroupname"], _config["mediaservicesaccountname"],
-                request.VideoId + "_Output", new Asset(name: $"{request.VideoId}/final.mp4", container: "editor"));
+                request.VideoId + "_Speech", new Asset(container: request.VoiceFileLink.Split("/").First()));
+            await client.Assets.CreateOrUpdateAsync(_config["mediaservicesresourcegroupname"], _config["mediaservicesaccountname"],
+                request.VideoId + "_Output", new Asset(container: "editor"));
 
             var inputs = new List<JobInput> {
-                new JobInputAsset(request.VideoId + "_VideoBackground"),
-                new JobInputAsset(request.VideoId + "_AudioBackground"),
-                new JobInputAsset(request.VideoId + "_Speech")
+                new JobInputAsset(request.VideoId + "_VideoBackground", label: request.VideoId + "_VideoBackground"),
+                new JobInputAsset(request.VideoId + "_AudioBackground", label: request.VideoId + "_AudioBackground"),
+                new JobInputAsset(request.VideoId + "_Speech", label: request.VideoId + "_Speech")
             };
             var outputs = new List<JobOutput> {
-                new JobOutputAsset(request.VideoId + "_Output")
+                new JobOutputAsset(request.VideoId + "_Output", label: request.VideoId + "_Output")
             };
 
             var job = await client.Jobs.CreateAsync(
