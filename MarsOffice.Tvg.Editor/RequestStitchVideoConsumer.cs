@@ -36,7 +36,7 @@ namespace MarsOffice.Tvg.Editor
                 var client = await CreateMediaServicesClientAsync();
                 client.LongRunningOperationRetryTimeout = 2;
 
-                await CreateOutputBlob(request);
+                // await CreateOutputBlob(request);
                 var transform = await CreateOrUpdateTransform(client, request);
 
                 var job = await CreateJob(client, request);
