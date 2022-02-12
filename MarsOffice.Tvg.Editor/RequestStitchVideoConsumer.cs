@@ -65,7 +65,7 @@ namespace MarsOffice.Tvg.Editor
             try
             {
                 existingJob = await client.Jobs.GetAsync(_config["mediaservicesresourcegroupname"],
-            _config["mediaservicesaccountname"], request.JobId, request.VideoId);
+            _config["mediaservicesaccountname"], "ZikMashTransform", request.VideoId);
             } catch (Exception)
             {
 
@@ -74,16 +74,29 @@ namespace MarsOffice.Tvg.Editor
             if (existingJob != null)
             {
                 await client.Jobs.DeleteAsync(_config["mediaservicesresourcegroupname"],
-                    _config["mediaservicesaccountname"], request.JobId, request.VideoId);
+                    _config["mediaservicesaccountname"], "ZikMashTransform", request.VideoId);
             }
 
             
             await client.Assets.CreateOrUpdateAsync(_config["mediaservicesresourcegroupname"], _config["mediaservicesaccountname"],
                 request.VideoId + "_Output", new Asset(container: "editor"));
 
+
             var inputs = new List<JobInput> {
-                
+                new JobInputHttp(new [] { request.VideoBackgroundFileLink })
+                {
+                    Label = "videobackground_" + request.VideoId
+                },
+                new JobInputHttp(new [] { request.AudioBackgroundFileLink })
+                {
+                    Label = "audiobackground_" + request.VideoId
+                },
+                new JobInputHttp(new [] { request.VoiceFileLink })
+                {
+                    Label = "speech_" + request.VideoId
+                },
             };
+
             var outputs = new List<JobOutput> {
                 new JobOutputAsset(request.VideoId + "_Output", label: request.VideoId + "_Output")
             };
@@ -91,7 +104,7 @@ namespace MarsOffice.Tvg.Editor
             var job = await client.Jobs.CreateAsync(
                 _config["mediaservicesresourcegroupname"],
                 _config["mediaservicesaccountname"],
-                request.JobId,
+                "ZikMashTransform",
                 request.VideoId,
                 new Job
                 {
@@ -111,45 +124,11 @@ namespace MarsOffice.Tvg.Editor
 
         private async Task<Transform> CreateOrUpdateTransform(IAzureMediaServicesClient client, RequestStitchVideo request)
         {
-            var overlays = new List<Overlay>
-                            {
-                                new VideoOverlay
-                                {
-                                    InputLabel = request.VideoId + "_VideoBackground",
-                                    Position = new Rectangle("0", "0", "1080", "1920"),
-                                    AudioGainLevel = 0,
-                                    CropRectangle = new Rectangle("0", "0", "1080", "1920")
-                                },
-                                //new VideoOverlay
-                                //{
-                                //    InputLabel = "textbox",
-                                //    Position = new Rectangle("10%", "50%", "80%", "50%"),
-                                //    Opacity = request.TextBoxOpacity,
-                                //    CropRectangle = new Rectangle("0", "0", "1080", "1920") // replace
-                                //}
-                            };
-
-            overlays.Add(new AudioOverlay
-            {
-                AudioGainLevel = 1,
-                InputLabel = request.VideoId + "_Speech"
-            });
-
-            overlays.Add(new AudioOverlay
-            {
-                AudioGainLevel = (request.AudioBackgroundVolumeInPercent ?? 20d) / 100d,
-                InputLabel = request.VideoId + "_AudioBackground"
-            });
-
             var outputs = new List<TransformOutput> {
                 new TransformOutput
                 {
                     Preset = new StandardEncoderPreset
                     {
-                        Filters = new Filters
-                        {
-                            Overlays = overlays
-                        },
                         Codecs = new List<Codec>
                         {
                             new AacAudio
@@ -182,7 +161,7 @@ namespace MarsOffice.Tvg.Editor
             return await client.Transforms.CreateOrUpdateAsync(
                 _config["mediaservicesresourcegroupname"],
                 _config["mediaservicesaccountname"],
-                request.JobId,
+                "ZikMashTransform",
                 outputs
                 );
         }
