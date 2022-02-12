@@ -55,12 +55,12 @@ namespace MarsOffice.Tvg.Editor
 
         private async Task<Job> CreateJob(IAzureMediaServicesClient client, RequestStitchVideo request)
         {
-            var inputs = new List<JobInput> { 
+            var inputs = new List<JobInput> {
                 new JobInputAsset("videobackground"),
                 new JobInputAsset("audiobackground"),
                 new JobInputAsset("speech")
             };
-            var outputs = new List<JobOutput> { 
+            var outputs = new List<JobOutput> {
                 new JobOutputAsset("final")
             };
 
@@ -91,12 +91,22 @@ namespace MarsOffice.Tvg.Editor
                             {
                                 new VideoOverlay
                                 {
+                                    InputLabel = "videobackground",
+                                    Position = new Rectangle("0", "0", "1080", "1920"),
+                                    AudioGainLevel = 0,
+                                    CropRectangle = new Rectangle("0", "0", "1080", "1920")
+                                },
+                                new VideoOverlay
+                                {
                                     InputLabel = "textbox",
                                     Position = new Rectangle("10%", "50%", "80%", "50%"),
+                                    Opacity = request.TextBoxOpacity,
+                                    CropRectangle = new Rectangle("0", "0", "1080", "1920")
                                 }
                             };
 
-            overlays.Add(new AudioOverlay { 
+            overlays.Add(new AudioOverlay
+            {
                 AudioGainLevel = 1,
                 InputLabel = "speech"
             });
