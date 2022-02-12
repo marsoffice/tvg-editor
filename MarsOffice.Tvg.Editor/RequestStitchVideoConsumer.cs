@@ -36,7 +36,6 @@ namespace MarsOffice.Tvg.Editor
                 var client = await CreateMediaServicesClientAsync();
                 client.LongRunningOperationRetryTimeout = 2;
 
-                // await CreateOutputBlob(request);
                 var transform = await CreateOrUpdateTransform(client, request);
 
                 var job = await CreateJob(client, request);
@@ -57,18 +56,6 @@ namespace MarsOffice.Tvg.Editor
                 });
                 await stitchVideoResponseQueue.FlushAsync();
             }
-        }
-
-        private async Task CreateOutputBlob(RequestStitchVideo request)
-        {
-            var cloudStorageAccount = CloudStorageAccount.Parse(_config["localsaconnectionstring"]);
-            var blobClient = cloudStorageAccount.CreateCloudBlobClient();
-            var blobContainerReference = blobClient.GetContainerReference("editor");
-#if DEBUG
-            await blobContainerReference.CreateIfNotExistsAsync();
-#endif
-            var bRef = blobContainerReference.GetBlockBlobReference($"{request.VideoId}/final.mp4");
-            await bRef.UploadTextAsync("");
         }
 
         private async Task<Job> CreateJob(IAzureMediaServicesClient client, RequestStitchVideo request)
