@@ -77,19 +77,12 @@ namespace MarsOffice.Tvg.Editor
                     _config["mediaservicesaccountname"], request.JobId, request.VideoId);
             }
 
-            await client.Assets.CreateOrUpdateAsync(_config["mediaservicesresourcegroupname"], _config["mediaservicesaccountname"],
-                request.VideoId + "_VideoBackground", new Asset(container: request.VideoBackgroundFileLink.Split("/").First()));
-            await client.Assets.CreateOrUpdateAsync(_config["mediaservicesresourcegroupname"], _config["mediaservicesaccountname"],
-                request.VideoId + "_AudioBackground", new Asset(container: request.AudioBackgroundFileLink.Split("/").First()));
-            await client.Assets.CreateOrUpdateAsync(_config["mediaservicesresourcegroupname"], _config["mediaservicesaccountname"],
-                request.VideoId + "_Speech", new Asset(container: request.VoiceFileLink.Split("/").First()));
+            
             await client.Assets.CreateOrUpdateAsync(_config["mediaservicesresourcegroupname"], _config["mediaservicesaccountname"],
                 request.VideoId + "_Output", new Asset(container: "editor"));
 
             var inputs = new List<JobInput> {
-                new JobInputAsset(request.VideoId + "_VideoBackground", label: request.VideoId + "_VideoBackground"),
-                new JobInputAsset(request.VideoId + "_AudioBackground", label: request.VideoId + "_AudioBackground"),
-                new JobInputAsset(request.VideoId + "_Speech", label: request.VideoId + "_Speech")
+                
             };
             var outputs = new List<JobOutput> {
                 new JobOutputAsset(request.VideoId + "_Output", label: request.VideoId + "_Output")
