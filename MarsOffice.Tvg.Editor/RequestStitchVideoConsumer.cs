@@ -43,7 +43,7 @@ namespace MarsOffice.Tvg.Editor
                     DownloadFile(request.VoiceFileLink, tempDirectory + "/speech.mp3")
                 });
 
-                var success = await AddTextOverlays(request, tempDirectory);
+                var success = await FfMpegTransform(request, tempDirectory);
                 if (!success)
                 {
                     throw new Exception("Text overlay failed");
@@ -85,9 +85,13 @@ namespace MarsOffice.Tvg.Editor
             }
         }
 
-        private async Task<bool> AddTextOverlays(RequestStitchVideo request, string tempDirectory)
+        private async Task<bool> FfMpegTransform(RequestStitchVideo request, string tempDirectory)
         {
-            return await ExecuteFfmpeg($"-i videobg.mp4 -y -vf \"drawtext=font='Times New Roman':text='Stack Overflow':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,5,10)'\" -codec:a copy videobg_overlayed.mp4", tempDirectory);
+            var drawTextCommands = request.Sentences.Select((s, i) =>
+            $"drawtext=font='{request.TextFontFamily ?? "Times New Roman"}':text='{s}':fontcolor=white:fontsize={request.TextFontSize ?? 24}:box=1:boxcolor={request.TextBoxColor ?? "black"}@{(request.TextBoxOpacity != null ? request.TextBoxOpacity / 100d : 0.5)}:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,5,10)'")
+                .ToList();
+            var command = $"-i videobg.mp4 -y -c:v libx264 -preset ultrafast -vf \"[in]{string.Join(", ", drawTextCommands)}\" -codec:a copy videobg_overlayed.mp4";
+            return await ExecuteFfmpeg(command, tempDirectory);
         }
 
         private async Task<bool> ExecuteFfmpeg(string arguments, string workingDir)
