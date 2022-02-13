@@ -68,7 +68,8 @@ namespace MarsOffice.Tvg.Editor
 
                 var sas = finalBlobReference.GetSharedAccessSignature(new SharedAccessBlobPolicy { 
                     Permissions = SharedAccessBlobPermissions.Read,
-                    SharedAccessStartTime = DateTimeOffset.UtcNow
+                    SharedAccessStartTime = DateTimeOffset.UtcNow,
+                    SharedAccessExpiryTime = DateTimeOffset.UtcNow.AddYears(10)
                 });
 
                 await stitchVideoResponseQueue.AddAsync(new StitchVideoResponse
