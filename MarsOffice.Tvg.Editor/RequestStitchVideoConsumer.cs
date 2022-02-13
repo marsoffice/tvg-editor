@@ -136,8 +136,7 @@ namespace MarsOffice.Tvg.Editor
         private async Task<bool> FfMpegTransform(RequestStitchVideo request, string tempDirectory)
         {
             var to = TimeSpan.FromMilliseconds(request.Durations.Sum());
-            var newTs = new TimeSpan(to.Hours, to.Minutes, to.Seconds, to.Milliseconds);
-            var command = $"-hide_banner -loglevel error -i videobg.mp4 -i audio_merged.mp3 -ss 00:00:00 -to {newTs} -map 0:v -map 1:a -y -c:v libx264 -preset ultrafast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour=&H{(request.TextBoxOpacity == null ? "80" : ToHex(request.TextBoxOpacity.Value))}000000,BorderStyle=4,Fontsize={request.TextFontSize ?? 24},PrimaryColour=&H{(request.TextColor != null ? request.TextColor.Replace("#", "") : "ffffff")}&'\" -codec:a copy final.mp4";
+            var command = $"-hide_banner -loglevel error -i videobg.mp4 -i audio_merged.mp3 -ss 00:00:00 -to {to} -map 0:v -map 1:a -y -c:v libx264 -preset ultrafast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour=&H{(request.TextBoxOpacity == null ? "80" : ToHex(request.TextBoxOpacity.Value))}000000,BorderStyle=4,Fontsize={request.TextFontSize ?? 24},PrimaryColour=&H{(request.TextColor != null ? request.TextColor.Replace("#", "") : "ffffff")}&'\" -codec:a copy final.mp4";
             return await ExecuteFfmpeg(command, tempDirectory);
         }
 
