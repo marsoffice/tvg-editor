@@ -117,7 +117,7 @@ namespace MarsOffice.Tvg.Editor
             long startSecs = 0;
             for (var i = 0; i < sentences.Count(); i++)
             {
-                var endSecs = startSecs + durations.ElementAt(i);
+                var endSecs = startSecs + (long)Math.Ceiling(durations.ElementAt(i) / 1000.0);
 
                 var startClassicTs = TimeSpan.FromSeconds(startSecs);
                 var endClassicTs = TimeSpan.FromSeconds(endSecs);
@@ -128,16 +128,13 @@ namespace MarsOffice.Tvg.Editor
                 startSecs = endSecs;
             }
             var file = new SubRipFile("subs.srt", entries);
-            var totalDurationSecs = durations.Sum();
-            var totalDurationTs = TimeSpan.FromSeconds(totalDurationSecs);
-            var totalDurationSrtTs = new SubRipTimeSpan(totalDurationTs.Hours, totalDurationTs.Minutes, totalDurationTs.Seconds, totalDurationTs.Milliseconds);
             file.SetTextLineMaxLength(100);
             await File.WriteAllTextAsync(outputFile, file.ToString());
         }
 
         private async Task<bool> FfMpegTransform(RequestStitchVideo request, string tempDirectory)
         {
-            var command = $"-i videobg.mp4 -ss 00:00:00 -to {TimeSpan.FromSeconds(request.Durations.Sum())} -y -c:v libx264 -preset ultrafast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour=&H{(request.TextBoxOpacity == null ? "80" : ToHex(request.TextBoxOpacity.Value))}000000,BorderStyle=4,Fontsize={request.TextFontSize ?? 24},PrimaryColour=&H{(request.TextColor != null ? request.TextColor.Replace("#", "") : "ffffff")}&'\" -codec:a copy final.mp4";
+            var command = $"-i videobg.mp4 -ss 00:00:00 -to {TimeSpan.FromMilliseconds(request.Durations.Sum())} -y -c:v libx264 -preset ultrafast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour=&H{(request.TextBoxOpacity == null ? "80" : ToHex(request.TextBoxOpacity.Value))}000000,BorderStyle=4,Fontsize={request.TextFontSize ?? 24},PrimaryColour=&H{(request.TextColor != null ? request.TextColor.Replace("#", "") : "ffffff")}&'\" -codec:a copy final.mp4";
             return await ExecuteFfmpeg(command, tempDirectory);
         }
 
@@ -167,9 +164,9 @@ namespace MarsOffice.Tvg.Editor
             };
 
             var process = Process.Start(psi);
-            process.WaitForExit((int)TimeSpan.FromMinutes(5).TotalMilliseconds);
+           // process.WaitForExit((int)TimeSpan.FromMinutes(5).TotalMilliseconds);
             await Task.CompletedTask;
-            return process.ExitCode != 0;
+            return process.ExitCode == 0;
         }
 
         private async Task DownloadFile(string link, string outPath)
