@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using ByteDev.Subtitles.SubRip;
 using MarsOffice.Tvg.Editor.Abstractions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
 using Microsoft.Azure.WebJobs;
@@ -18,12 +19,14 @@ namespace MarsOffice.Tvg.Editor
     {
         private readonly IConfiguration _config;
         private readonly CloudBlobClient _blobClient;
+        private readonly IWebHostEnvironment _env;
 
-        public RequestStitchVideoConsumer(IConfiguration config)
+        public RequestStitchVideoConsumer(IConfiguration config, IWebHostEnvironment env)
         {
             _config = config;
             var csa = CloudStorageAccount.Parse(config["localsaconnectionstring"]);
             _blobClient = csa.CreateCloudBlobClient();
+            _env = env;
         }
 
         [FunctionName("RequestStitchVideoConsumer")]
@@ -157,7 +160,7 @@ namespace MarsOffice.Tvg.Editor
         {
             var psi = new ProcessStartInfo
             {
-                FileName = _config["ffmpegpath"],
+                FileName = _env.ContentRootPath + "/" + _config["ffmpegpath"],
                 Arguments = arguments,
                 UseShellExecute = false,
                 RedirectStandardError = true,
