@@ -118,7 +118,7 @@ namespace MarsOffice.Tvg.Editor
             long startSecs = 0;
             for (var i = 0; i < sentences.Count(); i++)
             {
-                var endSecs = startSecs + (long)Math.Ceiling(durations.ElementAt(i) / 1000.0);
+                var endSecs = startSecs + (long)Math.Floor(durations.ElementAt(i) / 1000.0);
 
                 var startClassicTs = TimeSpan.FromSeconds(startSecs);
                 var endClassicTs = TimeSpan.FromSeconds(endSecs);
