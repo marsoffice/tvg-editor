@@ -45,12 +45,43 @@ namespace MarsOffice.Tvg.Editor
                     CreateSrtFile(request.Sentences, request.Durations, tempDirectory + "/subs.srt")
                 });
 
-                var success = await FfMpegTransform(request, tempDirectory);
+                var success = await MergeAudio(request, tempDirectory);
                 if (!success)
                 {
                     throw new Exception("Text overlay failed");
                 }
 
+                success = await FfMpegTransform(request, tempDirectory);
+                if (!success)
+                {
+                    throw new Exception("Text overlay failed");
+                }
+
+                var editorContainerReference = _blobClient.GetContainerReference("editor");
+                var finalBlobReference = editorContainerReference.GetBlockBlobReference($"{request.VideoId}.mp4");
+                await finalBlobReference.UploadFromFileAsync(tempDirectory + "/final.mp4");
+                finalBlobReference.Metadata.Add("VideoId", request.VideoId);
+                finalBlobReference.Metadata.Add("JobId", request.JobId);
+                finalBlobReference.Metadata.Add("UserId", request.UserId);
+                finalBlobReference.Metadata.Add("UserEmail", request.UserEmail);
+                await finalBlobReference.SetMetadataAsync();
+
+                var sas = finalBlobReference.GetSharedAccessSignature(new SharedAccessBlobPolicy { 
+                    Permissions = SharedAccessBlobPermissions.Read,
+                    SharedAccessStartTime = DateTimeOffset.UtcNow
+                });
+
+                await stitchVideoResponseQueue.AddAsync(new StitchVideoResponse
+                {
+                    JobId = request.JobId,
+                    Success = true,
+                    UserEmail = request.UserEmail,
+                    UserId = request.UserId,
+                    VideoId = request.VideoId,
+                    FinalVideoLink = finalBlobReference.Uri.LocalPath,
+                    SasUrl = finalBlobReference.Uri.ToString() + sas
+                });
+                await stitchVideoResponseQueue.FlushAsync();
             }
             catch (Exception e)
             {
@@ -80,7 +111,7 @@ namespace MarsOffice.Tvg.Editor
             }
         }
 
-        private async Task CreateSrtFile(IEnumerable<string> sentences, IEnumerable<long> durations, string outputFile)
+        private static async Task CreateSrtFile(IEnumerable<string> sentences, IEnumerable<long> durations, string outputFile)
         {
             var entries = new List<SubRipEntry>();
             long startSecs = 0;
@@ -106,8 +137,21 @@ namespace MarsOffice.Tvg.Editor
 
         private async Task<bool> FfMpegTransform(RequestStitchVideo request, string tempDirectory)
         {
-            var command = $"-i videobg.mp4 -y -c:v libx264 -preset ultrafast -vf \"subtitles=subs.srt:force_style='Fontsize={request.TextFontSize ?? 24},PrimaryColour=&H{(request.TextColor != null ? request.TextColor.Replace("#", "") : "ffffff")}&'\" -codec:a copy videobg_overlayed.mp4";
+            var command = $"-i videobg.mp4 -ss 00:00:00 -to {TimeSpan.FromSeconds(request.Durations.Sum())} -y -c:v libx264 -preset ultrafast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour=&H{(request.TextBoxOpacity == null ? "80" : ToHex(request.TextBoxOpacity.Value))}000000,BorderStyle=4,Fontsize={request.TextFontSize ?? 24},PrimaryColour=&H{(request.TextColor != null ? request.TextColor.Replace("#", "") : "ffffff")}&'\" -codec:a copy final.mp4";
             return await ExecuteFfmpeg(command, tempDirectory);
+        }
+
+        private async Task<bool> MergeAudio(RequestStitchVideo request, string tempDirectory)
+        {
+            var command = $"-i audiobg.mp3 -i speech.mp3 -filter_complex \"[1:a]volume=1,apad[A];[0:a]volume={(request.AudioBackgroundVolumeInPercent == null ? 0.4 : Math.Round(request.AudioBackgroundVolumeInPercent.Value / 100d, 2))},[A]amerge[out]\" -c:v copy -map [out] -y audio_merged.mp3";
+            return await ExecuteFfmpeg(command, tempDirectory);
+        }
+
+        private static string ToHex(float value)
+        {
+            var perc = (int)value;
+            var decValue = perc * 255 / 100;
+            return decValue.ToString("X");
         }
 
         private async Task<bool> ExecuteFfmpeg(string arguments, string workingDir)
