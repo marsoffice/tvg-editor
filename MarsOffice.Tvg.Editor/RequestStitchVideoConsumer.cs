@@ -34,16 +34,20 @@ namespace MarsOffice.Tvg.Editor
             string tempDirectory = null;
             try
             {
-                tempDirectory = Path.GetTempPath() + "/" + Guid.NewGuid().ToString();
+                tempDirectory = Path.GetTempPath() + Guid.NewGuid().ToString();
                 Directory.CreateDirectory(tempDirectory);
                 await Task.WhenAll(new[]
                 {
                     DownloadFile(request.AudioBackgroundFileLink, tempDirectory + "/audiobg.mp3"),
                     DownloadFile(request.VideoBackgroundFileLink, tempDirectory + "/videobg.mp4"),
-                    DownloadFile(request.AudioBackgroundFileLink, tempDirectory + "/speech.mp3")
+                    DownloadFile(request.VoiceFileLink, tempDirectory + "/speech.mp3")
                 });
 
-                await AddTextOverlays(request, tempDirectory);
+                var success = await AddTextOverlays(request, tempDirectory);
+                if (!success)
+                {
+                    throw new Exception("Text overlay failed");
+                }
 
             }
             catch (Exception e)
@@ -81,9 +85,9 @@ namespace MarsOffice.Tvg.Editor
             }
         }
 
-        private async Task AddTextOverlays(RequestStitchVideo request, string tempDirectory)
+        private async Task<bool> AddTextOverlays(RequestStitchVideo request, string tempDirectory)
         {
-            await ExecuteFfmpeg("", tempDirectory);
+            return await ExecuteFfmpeg($"-i videobg.mp4 -vf \"drawtext=font='Times New Roman':text='Stack Overflow':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,5,10)'\" -codec:a copy videobg_overlayed.mp4", tempDirectory);
         }
 
         private async Task<bool> ExecuteFfmpeg(string arguments, string workingDir)
@@ -99,7 +103,8 @@ namespace MarsOffice.Tvg.Editor
             };
 
             var process = Process.Start(psi);
-            process.WaitForExit((int)TimeSpan.FromSeconds(60).TotalMilliseconds);
+            process.WaitForExit((int)TimeSpan.FromMinutes(5).TotalMilliseconds);
+            await Task.CompletedTask;
             return process.ExitCode != 0;
         }
 
