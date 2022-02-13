@@ -87,9 +87,14 @@ namespace MarsOffice.Tvg.Editor
 
         private async Task<bool> FfMpegTransform(RequestStitchVideo request, string tempDirectory)
         {
-            var drawTextCommands = request.Sentences.Select((s, i) =>
-            $"drawtext=font='{request.TextFontFamily ?? "Times New Roman"}':text='{s}':fontcolor=white:fontsize={request.TextFontSize ?? 24}:box=1:boxcolor={request.TextBoxColor ?? "black"}@{(request.TextBoxOpacity != null ? request.TextBoxOpacity / 100d : 0.5)}:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,5,10)'")
-                .ToList();
+            long startSecs = 0;
+            var drawTextCommands = new List<string>();
+            for (var i = 0; i < request.Sentences.Count(); i++)
+            {
+                var cmd = $"drawtext=font='{request.TextFontFamily ?? "Times New Roman"}':text='{request.Sentences.ElementAt(i)}':fontcolor=white:fontsize={request.TextFontSize ?? 24}:box=1:boxcolor={request.TextBoxColor ?? "black"}@{(request.TextBoxOpacity != null ? request.TextBoxOpacity / 100d : 0.5)}:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,{startSecs},{startSecs + request.Durations.ElementAt(i)})'";
+                drawTextCommands.Add(cmd);
+                startSecs += request.Durations.ElementAt(i);
+            }
             var command = $"-i videobg.mp4 -y -c:v libx264 -preset ultrafast -vf \"[in]{string.Join(", ", drawTextCommands)}\" -codec:a copy videobg_overlayed.mp4";
             return await ExecuteFfmpeg(command, tempDirectory);
         }
