@@ -76,13 +76,6 @@ namespace MarsOffice.Tvg.Editor
                 } catch (Exception)
                 {
                     // ignored
-
-
-
-
-
-
-
                 }
             }
         }
