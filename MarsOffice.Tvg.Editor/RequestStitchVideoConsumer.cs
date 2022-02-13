@@ -164,7 +164,8 @@ namespace MarsOffice.Tvg.Editor
             };
 
             var process = Process.Start(psi);
-           // process.WaitForExit((int)TimeSpan.FromMinutes(5).TotalMilliseconds);
+            process.WaitForExit();
+            process.Close();
             await Task.CompletedTask;
             return process.ExitCode == 0;
         }
