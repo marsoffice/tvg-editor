@@ -21,6 +21,7 @@ namespace MarsOffice.Tvg.Editor.Abstractions
         public float? TextFontSize { get; set; }
         public string TextBoxColor { get; set; }
         public float? TextBoxOpacity { get; set; }
+        public string TextColor { get; set; }
         public string TextBoxBorderColor { get; set; }
     }
 }

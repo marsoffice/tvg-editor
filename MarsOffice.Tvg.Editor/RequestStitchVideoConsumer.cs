@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using ByteDev.Subtitles.SubRip;
 using MarsOffice.Tvg.Editor.Abstractions;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
@@ -40,7 +41,8 @@ namespace MarsOffice.Tvg.Editor
                 {
                     DownloadFile(request.AudioBackgroundFileLink, tempDirectory + "/audiobg.mp3"),
                     DownloadFile(request.VideoBackgroundFileLink, tempDirectory + "/videobg.mp4"),
-                    DownloadFile(request.VoiceFileLink, tempDirectory + "/speech.mp3")
+                    DownloadFile(request.VoiceFileLink, tempDirectory + "/speech.mp3"),
+                    CreateSrtFile(request.Sentences, request.Durations, tempDirectory + "/subs.srt")
                 });
 
                 var success = await FfMpegTransform(request, tempDirectory);
@@ -85,17 +87,33 @@ namespace MarsOffice.Tvg.Editor
             }
         }
 
+        private async Task CreateSrtFile(IEnumerable<string> sentences, IEnumerable<long> durations, string outputFile)
+        {
+            var entries = new List<SubRipEntry>();
+            long startSecs = 0;
+            for (var i = 0; i < sentences.Count(); i++)
+            {
+                var endSecs = startSecs + durations.ElementAt(i);
+
+                var startClassicTs = TimeSpan.FromSeconds(startSecs);
+                var endClassicTs = TimeSpan.FromSeconds(endSecs);
+
+                var startTs = new SubRipTimeSpan(startClassicTs.Hours, startClassicTs.Minutes, startClassicTs.Seconds, startClassicTs.Milliseconds);
+                var endTs = new SubRipTimeSpan(endClassicTs.Hours, endClassicTs.Minutes, endClassicTs.Seconds, endClassicTs.Milliseconds);
+                entries.Add(new SubRipEntry(i + 1, new SubRipDuration(startTs, endTs), sentences.ElementAt(i)));
+                startSecs = endSecs;
+            }
+            var file = new SubRipFile("subs.srt", entries);
+            var totalDurationSecs = durations.Sum();
+            var totalDurationTs = TimeSpan.FromSeconds(totalDurationSecs);
+            var totalDurationSrtTs = new SubRipTimeSpan(totalDurationTs.Hours, totalDurationTs.Minutes, totalDurationTs.Seconds, totalDurationTs.Milliseconds);
+            file.SetTextLineMaxLength(100);
+            await File.WriteAllTextAsync(outputFile, file.ToString());
+        }
+
         private async Task<bool> FfMpegTransform(RequestStitchVideo request, string tempDirectory)
         {
-            long startSecs = 0;
-            var drawTextCommands = new List<string>();
-            for (var i = 0; i < request.Sentences.Count(); i++)
-            {
-                var cmd = $"drawtext=font='{request.TextFontFamily ?? "Times New Roman"}':text='{request.Sentences.ElementAt(i)}':fontcolor=white:fontsize={request.TextFontSize ?? 24}:box=1:boxcolor={request.TextBoxColor ?? "black"}@{(request.TextBoxOpacity != null ? request.TextBoxOpacity / 100d : 0.5)}:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,{startSecs},{startSecs + request.Durations.ElementAt(i)})'";
-                drawTextCommands.Add(cmd);
-                startSecs += request.Durations.ElementAt(i);
-            }
-            var command = $"-i videobg.mp4 -y -c:v libx264 -preset ultrafast -vf \"[in]{string.Join(", ", drawTextCommands)}\" -codec:a copy videobg_overlayed.mp4";
+            var command = $"-i videobg.mp4 -y -c:v libx264 -preset ultrafast -vf \"subtitles=subs.srt:force_style='Fontsize={request.TextFontSize ?? 24},PrimaryColour=&H{(request.TextColor != null ? request.TextColor.Replace("#", "") : "ffffff")}&'\" -codec:a copy videobg_overlayed.mp4";
             return await ExecuteFfmpeg(command, tempDirectory);
         }
 

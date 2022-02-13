@@ -10,6 +10,7 @@
 		<ProjectReference Include="../MarsOffice.Tvg.Editor.Abstractions/MarsOffice.Tvg.Editor.Abstractions.csproj" />
 	</ItemGroup>
 	<ItemGroup>
+		<PackageReference Include="ByteDev.Subtitles.SubRip" Version="1.0.1" />
 		<PackageReference Include="MarsOffice.Microfunction" Version="3.0.12" />
 		<PackageReference Include="MarsOffice.Dto" Version="3.0.12" />
 		<PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
