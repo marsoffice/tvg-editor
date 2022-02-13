@@ -134,13 +134,15 @@ namespace MarsOffice.Tvg.Editor
 
         private async Task<bool> FfMpegTransform(RequestStitchVideo request, string tempDirectory)
         {
-            var command = $"-i videobg.mp4 -ss 00:00:00 -to {TimeSpan.FromMilliseconds(request.Durations.Sum())} -y -c:v libx264 -preset ultrafast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour=&H{(request.TextBoxOpacity == null ? "80" : ToHex(request.TextBoxOpacity.Value))}000000,BorderStyle=4,Fontsize={request.TextFontSize ?? 24},PrimaryColour=&H{(request.TextColor != null ? request.TextColor.Replace("#", "") : "ffffff")}&'\" -codec:a copy final.mp4";
+            var to = TimeSpan.FromMilliseconds(request.Durations.Sum());
+            var newTs = new TimeSpan(to.Hours, to.Minutes, to.Seconds);
+            var command = $"-i videobg.mp4 -ss 00:00:00 -to {newTs} -y -c:v libx264 -preset ultrafast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour=&H{(request.TextBoxOpacity == null ? "80" : ToHex(request.TextBoxOpacity.Value))}000000,BorderStyle=4,Fontsize={request.TextFontSize ?? 24},PrimaryColour=&H{(request.TextColor != null ? request.TextColor.Replace("#", "") : "ffffff")}&'\" -codec:a copy final.mp4";
             return await ExecuteFfmpeg(command, tempDirectory);
         }
 
         private async Task<bool> MergeAudio(RequestStitchVideo request, string tempDirectory)
         {
-            var command = $"-i audiobg.mp3 -i speech.mp3 -filter_complex \"[1:a]volume=1,apad[A];[0:a]volume={(request.AudioBackgroundVolumeInPercent == null ? 0.4 : Math.Round(request.AudioBackgroundVolumeInPercent.Value / 100d, 2))},[A]amerge[out]\" -c:v copy -map [out] -y audio_merged.mp3";
+            var command = $"-i audiobg.mp3 -i speech.mp3 -filter_complex \"[1:a]volume=1,apad[A];[0:a]volume={(request.AudioBackgroundVolumeInPercent == null ? 0.2 : Math.Round(request.AudioBackgroundVolumeInPercent.Value / 100d, 2))},[A]amerge[out]\" -c:v copy -map [out] -y audio_merged.mp3";
             return await ExecuteFfmpeg(command, tempDirectory);
         }
 
@@ -165,13 +167,6 @@ namespace MarsOffice.Tvg.Editor
 
             var process = Process.Start(psi);
             process.WaitForExit();
-            try
-            {
-                process.Close();
-            } catch (Exception)
-            {
-                // ignored
-            }
             await Task.CompletedTask;
             return process.ExitCode == 0;
         }
