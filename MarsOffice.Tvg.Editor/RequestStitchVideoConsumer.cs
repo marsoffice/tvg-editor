@@ -87,7 +87,7 @@ namespace MarsOffice.Tvg.Editor
 
         private async Task<bool> AddTextOverlays(RequestStitchVideo request, string tempDirectory)
         {
-            return await ExecuteFfmpeg($"-i videobg.mp4 -vf \"drawtext=font='Times New Roman':text='Stack Overflow':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,5,10)'\" -codec:a copy videobg_overlayed.mp4", tempDirectory);
+            return await ExecuteFfmpeg($"-i videobg.mp4 -y -vf \"drawtext=font='Times New Roman':text='Stack Overflow':fontcolor=white:fontsize=24:box=1:boxcolor=black@0.5:boxborderw=5:x=(w-text_w)/2:y=(h-text_h)/2:enable='between(t,5,10)'\" -codec:a copy videobg_overlayed.mp4", tempDirectory);
         }
 
         private async Task<bool> ExecuteFfmpeg(string arguments, string workingDir)
