@@ -35,6 +35,36 @@ namespace MarsOffice.Tvg.Editor
             string tempDirectory = null;
             try
             {
+                #if !DEBUG
+                var chmodPsi1 = new ProcessStartInfo
+                {
+                    Arguments = $"-c \"chmod u+x {_config["ffprobepath"]}\"",
+                    FileName = "/bin/bash",
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true
+                };
+                var chmod1Process = Process.Start(chmodPsi1);
+                chmod1Process.WaitForExit((int)TimeSpan.FromSeconds(60).TotalMilliseconds);
+                if (chmod1Process.ExitCode != 0)
+                {
+                    throw new Exception("Could not execute chmod 1");
+                }
+
+                var chmodPsi2 = new ProcessStartInfo
+                {
+                    Arguments = $"-c \"chmod u+x {_config["ffmpegpath"]}\"",
+                    FileName = "/bin/bash",
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true
+                };
+                var chmod2Process = Process.Start(chmodPsi2);
+                chmod2Process.WaitForExit((int)TimeSpan.FromSeconds(60).TotalMilliseconds);
+                if (chmod2Process.ExitCode != 0)
+                {
+                    throw new Exception("Could not execute chmod 2");
+                }
+                #endif
+
                 tempDirectory = Path.GetTempPath() + Guid.NewGuid().ToString();
                 Directory.CreateDirectory(tempDirectory);
                 await Task.WhenAll(new[]
