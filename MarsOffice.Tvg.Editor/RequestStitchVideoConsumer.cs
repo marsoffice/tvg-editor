@@ -157,7 +157,7 @@ namespace MarsOffice.Tvg.Editor
         {
             var psi = new ProcessStartInfo
             {
-                FileName = Environment.CurrentDirectory + "/" + _config["ffmpegpath"],
+                FileName = _config["ffmpegpath"],
                 Arguments = arguments,
                 UseShellExecute = false,
                 RedirectStandardError = true,
