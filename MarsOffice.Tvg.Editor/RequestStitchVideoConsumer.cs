@@ -42,7 +42,7 @@ namespace MarsOffice.Tvg.Editor
             string tempDirectory = null;
             try
             {
-                #if !DEBUG
+#if !DEBUG
                 var chmodPsi1 = new ProcessStartInfo
                 {
                     Arguments = $"-c \"chmod u+x {_config["ffprobepath"]}\"",
@@ -70,7 +70,7 @@ namespace MarsOffice.Tvg.Editor
                 {
                     throw new Exception("Could not execute chmod 2");
                 }
-                #endif
+#endif
 
                 tempDirectory = Path.GetTempPath() + Guid.NewGuid().ToString();
                 Directory.CreateDirectory(tempDirectory);
@@ -103,7 +103,8 @@ namespace MarsOffice.Tvg.Editor
                 finalBlobReference.Metadata.Add("UserEmail", request.UserEmail);
                 await finalBlobReference.SetMetadataAsync();
 
-                var sas = finalBlobReference.GetSharedAccessSignature(new SharedAccessBlobPolicy { 
+                var sas = finalBlobReference.GetSharedAccessSignature(new SharedAccessBlobPolicy
+                {
                     Permissions = SharedAccessBlobPermissions.Read,
                     SharedAccessStartTime = DateTimeOffset.UtcNow,
                     SharedAccessExpiryTime = DateTimeOffset.UtcNow.AddYears(10)
@@ -138,7 +139,8 @@ namespace MarsOffice.Tvg.Editor
                     await stitchVideoResponseQueue.FlushAsync();
                 }
                 throw;
-            } finally
+            }
+            finally
             {
                 try
                 {
@@ -146,7 +148,8 @@ namespace MarsOffice.Tvg.Editor
                     {
                         Directory.Delete(tempDirectory, true);
                     }
-                } catch (Exception)
+                }
+                catch (Exception)
                 {
                     // ignored
                 }
@@ -177,6 +180,26 @@ namespace MarsOffice.Tvg.Editor
         private async Task<bool> FfMpegTransform(RequestStitchVideo request, string tempDirectory)
         {
             var to = TimeSpan.FromMilliseconds(request.Durations.Sum());
+            if (request.MaxDurationInSeconds.HasValue)
+            {
+                if (request.TrimGracefullyToMaxDuration == true)
+                {
+                    long totalSeconds = 0;
+                    foreach (var duration in request.Durations)
+                    {
+                        if ((totalSeconds + duration) >= request.MaxDurationInSeconds.Value)
+                        {
+                            to = TimeSpan.FromSeconds(totalSeconds);
+                            break;
+                        }
+                        totalSeconds += duration;
+                    }
+                }
+                else
+                {
+                    to = TimeSpan.FromSeconds(request.MaxDurationInSeconds.Value);
+                }
+            }
             var command = $"-hide_banner -loglevel error -stream_loop -1 -i videobg.mp4 -i audio_merged.mp3 -ss 00:00:00 -to {to} -map 0:v -map 1:a -y -c:v libx264 -preset ultrafast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour=&H{(request.TextBoxOpacity == null ? "80" : ToHex(request.TextBoxOpacity.Value))}000000,BorderStyle=4,Fontsize={request.TextFontSize ?? 18},PrimaryColour=&H{(request.TextColor != null ? request.TextColor.Replace("#", "") : "ffffff")}&'\" -codec:a copy final.mp4";
             return await ExecuteFfmpeg(command, tempDirectory);
         }
