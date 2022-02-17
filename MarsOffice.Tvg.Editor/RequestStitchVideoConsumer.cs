@@ -180,24 +180,24 @@ namespace MarsOffice.Tvg.Editor
         private async Task<bool> FfMpegTransform(RequestStitchVideo request, string tempDirectory)
         {
             var to = TimeSpan.FromMilliseconds(request.Durations.Sum());
-            if (request.MaxDurationInSeconds.HasValue && (request.MaxDurationInSeconds.Value * 1000) < request.Durations.Sum())
+            if (request.FinalFileDurationInMillis.HasValue && request.FinalFileDurationInMillis.Value < request.Durations.Sum())
             {
                 if (request.TrimGracefullyToMaxDuration == true)
                 {
-                    long totalSeconds = 0;
+                    long totalMillis = 0;
                     foreach (var duration in request.Durations)
                     {
-                        if ((totalSeconds + duration) > request.MaxDurationInSeconds.Value)
+                        if ((totalMillis + duration) > request.FinalFileDurationInMillis.Value)
                         {
                             break;
                         }
-                        totalSeconds += duration;
+                        totalMillis += duration;
                     }
-                    to = TimeSpan.FromSeconds(totalSeconds);
+                    to = TimeSpan.FromMilliseconds(totalMillis);
                 }
                 else
                 {
-                    to = TimeSpan.FromSeconds(request.MaxDurationInSeconds.Value);
+                    to = TimeSpan.FromMilliseconds(request.FinalFileDurationInMillis.Value);
                 }
             }
             var command = $"-hide_banner -loglevel error -stream_loop -1 -i videobg.mp4 -i audio_merged.mp3 -ss 00:00:00 -to {to} -map 0:v -map 1:a -y -c:v libx264 -preset ultrafast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour=&H{(request.TextBoxOpacity == null ? "80" : ToHex(request.TextBoxOpacity.Value))}000000,BorderStyle=4,Fontsize={request.TextFontSize ?? 18},PrimaryColour=&H{(request.TextColor != null ? request.TextColor.Replace("#", "") : "ffffff")}&'\" -codec:a copy final.mp4";

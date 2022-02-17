@@ -13,7 +13,7 @@ namespace MarsOffice.Tvg.Editor.Abstractions
         public IEnumerable<string> Sentences { get; set; }
         public IEnumerable<long> Durations { get; set; }
         public string VoiceFileLink { get; set; }
-        public long? MaxDurationInSeconds { get; set; }
+        public long? FinalFileDurationInMillis { get; set; }
         public bool? TrimGracefullyToMaxDuration { get; set; }
         public string AudioBackgroundFileLink { get; set; }
         public float? AudioBackgroundVolumeInPercent { get; set; }
