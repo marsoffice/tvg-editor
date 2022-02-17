@@ -127,6 +127,7 @@ namespace MarsOffice.Tvg.Editor
                     VideoId = request.VideoId
                 });
                 await stitchVideoResponseQueue.FlushAsync();
+                throw;
             } finally
             {
                 try
