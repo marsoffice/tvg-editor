@@ -183,7 +183,7 @@ namespace MarsOffice.Tvg.Editor
 
         private async Task<bool> MergeAudio(RequestStitchVideo request, string tempDirectory)
         {
-            var command = $"-hide_banner -loglevel error -i speech.mp3 -stream_loop -1 -i audiobg.mp3 -filter_complex \"[1:a]volume=1,apad[A];[0:a]volume={(request.AudioBackgroundVolumeInPercent == null ? 0.1 : Math.Round(request.AudioBackgroundVolumeInPercent.Value / 100d, 2))},[A]amerge[out]\" -c:v copy -map [out] -y audio_merged.mp3";
+            var command = $"-hide_banner -loglevel error -i speech.mp3 -stream_loop -1 -i audiobg.mp3 -filter_complex \"[1:a]volume={(request.AudioBackgroundVolumeInPercent == null ? 0.1 : Math.Round(request.AudioBackgroundVolumeInPercent.Value / 100d, 2))},apad[A];[0:a]volume=1,[A]amerge[out]\" -c:v copy -map [out] -y audio_merged.mp3";
             return await ExecuteFfmpeg(command, tempDirectory);
         }
 
