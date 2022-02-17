@@ -177,13 +177,13 @@ namespace MarsOffice.Tvg.Editor
         private async Task<bool> FfMpegTransform(RequestStitchVideo request, string tempDirectory)
         {
             var to = TimeSpan.FromMilliseconds(request.Durations.Sum());
-            var command = $"-hide_banner -loglevel error -i videobg.mp4 -i audio_merged.mp3 -ss 00:00:00 -to {to} -map 0:v -map 1:a -y -c:v libx264 -preset ultrafast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour=&H{(request.TextBoxOpacity == null ? "80" : ToHex(request.TextBoxOpacity.Value))}000000,BorderStyle=4,Fontsize={request.TextFontSize ?? 24},PrimaryColour=&H{(request.TextColor != null ? request.TextColor.Replace("#", "") : "ffffff")}&'\" -codec:a copy final.mp4";
+            var command = $"-hide_banner -loglevel error -stream_loop -1 -i videobg.mp4 -i audio_merged.mp3 -ss 00:00:00 -to {to} -map 0:v -map 1:a -y -c:v libx264 -preset ultrafast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour=&H{(request.TextBoxOpacity == null ? "80" : ToHex(request.TextBoxOpacity.Value))}000000,BorderStyle=4,Fontsize={request.TextFontSize ?? 24},PrimaryColour=&H{(request.TextColor != null ? request.TextColor.Replace("#", "") : "ffffff")}&'\" -codec:a copy final.mp4";
             return await ExecuteFfmpeg(command, tempDirectory);
         }
 
         private async Task<bool> MergeAudio(RequestStitchVideo request, string tempDirectory)
         {
-            var command = $"-hide_banner -loglevel error -i audiobg.mp3 -i speech.mp3 -filter_complex \"[1:a]volume=1,apad[A];[0:a]volume={(request.AudioBackgroundVolumeInPercent == null ? 0.1 : Math.Round(request.AudioBackgroundVolumeInPercent.Value / 100d, 2))},[A]amerge[out]\" -c:v copy -map [out] -y audio_merged.mp3";
+            var command = $"-hide_banner -loglevel error -i speech.mp3 -stream_loop -1 -i audiobg.mp3 -filter_complex \"[1:a]volume=1,apad[A];[0:a]volume={(request.AudioBackgroundVolumeInPercent == null ? 0.1 : Math.Round(request.AudioBackgroundVolumeInPercent.Value / 100d, 2))},[A]amerge[out]\" -c:v copy -map [out] -y audio_merged.mp3";
             return await ExecuteFfmpeg(command, tempDirectory);
         }
 
@@ -207,7 +207,7 @@ namespace MarsOffice.Tvg.Editor
             };
 
             var process = Process.Start(psi);
-            process.WaitForExit();
+            process.WaitForExit(5 * 60 * 1000);
             await Task.CompletedTask;
             return process.ExitCode == 0;
         }
