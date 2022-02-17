@@ -128,7 +128,7 @@ namespace MarsOffice.Tvg.Editor
                 {
                     await stitchVideoResponseQueue.AddAsync(new StitchVideoResponse
                     {
-                        Error = e.Message,
+                        Error = "EditorService: " + e.Message,
                         JobId = request.JobId,
                         Success = false,
                         UserEmail = request.UserEmail,
