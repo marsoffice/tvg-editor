@@ -180,20 +180,20 @@ namespace MarsOffice.Tvg.Editor
         private async Task<bool> FfMpegTransform(RequestStitchVideo request, string tempDirectory)
         {
             var to = TimeSpan.FromMilliseconds(request.Durations.Sum());
-            if (request.MaxDurationInSeconds.HasValue)
+            if (request.MaxDurationInSeconds.HasValue && (request.MaxDurationInSeconds.Value * 1000) < request.Durations.Sum())
             {
                 if (request.TrimGracefullyToMaxDuration == true)
                 {
                     long totalSeconds = 0;
                     foreach (var duration in request.Durations)
                     {
-                        if ((totalSeconds + duration) >= request.MaxDurationInSeconds.Value)
+                        if ((totalSeconds + duration) > request.MaxDurationInSeconds.Value)
                         {
-                            to = TimeSpan.FromSeconds(totalSeconds);
                             break;
                         }
                         totalSeconds += duration;
                     }
+                    to = TimeSpan.FromSeconds(totalSeconds);
                 }
                 else
                 {
