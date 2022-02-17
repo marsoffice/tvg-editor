@@ -8,6 +8,7 @@ using ByteDev.Subtitles.SubRip;
 using MarsOffice.Tvg.Editor.Abstractions;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
+using Microsoft.Azure.Storage.Queue.Protocol;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -28,10 +29,16 @@ namespace MarsOffice.Tvg.Editor
 
         [FunctionName("RequestStitchVideoConsumer")]
         public async Task Run(
-            [QueueTrigger("request-stitch-video", Connection = "localsaconnectionstring")] RequestStitchVideo request,
+            [QueueTrigger("request-stitch-video", Connection = "localsaconnectionstring")] QueueMessage message,
             [Queue("stitch-video-response", Connection = "localsaconnectionstring")] IAsyncCollector<StitchVideoResponse> stitchVideoResponseQueue,
             ILogger log)
         {
+            var request = Newtonsoft.Json.JsonConvert.DeserializeObject<RequestStitchVideo>(message.Text,
+                    new Newtonsoft.Json.JsonSerializerSettings
+                    {
+                        ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
+                        NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore
+                    });
             string tempDirectory = null;
             try
             {
@@ -117,16 +124,19 @@ namespace MarsOffice.Tvg.Editor
             catch (Exception e)
             {
                 log.LogError(e, "Function threw an exception");
-                await stitchVideoResponseQueue.AddAsync(new StitchVideoResponse
+                if (message.DequeueCount >= 5)
                 {
-                    Error = e.Message,
-                    JobId = request.JobId,
-                    Success = false,
-                    UserEmail = request.UserEmail,
-                    UserId = request.UserId,
-                    VideoId = request.VideoId
-                });
-                await stitchVideoResponseQueue.FlushAsync();
+                    await stitchVideoResponseQueue.AddAsync(new StitchVideoResponse
+                    {
+                        Error = e.Message,
+                        JobId = request.JobId,
+                        Success = false,
+                        UserEmail = request.UserEmail,
+                        UserId = request.UserId,
+                        VideoId = request.VideoId
+                    });
+                    await stitchVideoResponseQueue.FlushAsync();
+                }
                 throw;
             } finally
             {
