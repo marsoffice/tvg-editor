@@ -8,7 +8,7 @@ using ByteDev.Subtitles.SubRip;
 using MarsOffice.Tvg.Editor.Abstractions;
 using Microsoft.Azure.Storage;
 using Microsoft.Azure.Storage.Blob;
-using Microsoft.Azure.Storage.Queue.Protocol;
+using Microsoft.Azure.Storage.Queue;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -29,11 +29,11 @@ namespace MarsOffice.Tvg.Editor
 
         [FunctionName("RequestStitchVideoConsumer")]
         public async Task Run(
-            [QueueTrigger("request-stitch-video", Connection = "localsaconnectionstring")] QueueMessage message,
+            [QueueTrigger("request-stitch-video", Connection = "localsaconnectionstring")] CloudQueueMessage message,
             [Queue("stitch-video-response", Connection = "localsaconnectionstring")] IAsyncCollector<StitchVideoResponse> stitchVideoResponseQueue,
             ILogger log)
         {
-            var request = Newtonsoft.Json.JsonConvert.DeserializeObject<RequestStitchVideo>(message.Text,
+            var request = Newtonsoft.Json.JsonConvert.DeserializeObject<RequestStitchVideo>(message.AsString,
                     new Newtonsoft.Json.JsonSerializerSettings
                     {
                         ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver(),
