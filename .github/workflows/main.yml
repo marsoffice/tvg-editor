@@ -161,7 +161,7 @@ jobs:
             }
 
       - name: deploy
-        uses: Azure/functions-action@v1.3.2
+        uses: Azure/functions-action@v1.4.4
         with:
           package: ./dist
           app-name: func-${{ github.workflow }}-westeurope-stg
@@ -193,7 +193,7 @@ jobs:
             }
 
       - name: deploy
-        uses: Azure/functions-action@v1.3.2
+        uses: Azure/functions-action@v1.4.4
         with:
           package: ./dist
           app-name: func-${{ github.workflow }}-westeurope-prod
