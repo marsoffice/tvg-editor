@@ -149,7 +149,7 @@ jobs:
           name: "dist"
           path: ./dist
 
-      name: az login
+      - name: az login
         uses: Azure/login@v1
         with:
           creds: |
@@ -181,7 +181,7 @@ jobs:
           name: "dist"
           path: ./dist
 
-      name: az login
+      - name: az login
         uses: Azure/login@v1
         with:
           creds: |
