@@ -117,7 +117,7 @@ namespace MarsOffice.Tvg.Editor
                     UserEmail = request.UserEmail,
                     UserId = request.UserId,
                     VideoId = request.VideoId,
-                    FinalVideoLink = finalBlobReference.Uri.LocalPath,
+                    FinalVideoLink = $"editor/{request.VideoId}.mp4",
                     SasUrl = finalBlobReference.Uri.ToString() + sas
                 });
                 await stitchVideoResponseQueue.FlushAsync();
