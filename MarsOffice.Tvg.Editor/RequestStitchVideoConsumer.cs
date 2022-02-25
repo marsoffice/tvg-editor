@@ -203,7 +203,7 @@ namespace MarsOffice.Tvg.Editor
                     to = TimeSpan.FromMilliseconds(request.FinalFileDurationInMillis.Value);
                 }
             }
-            var command = $"-hide_banner -loglevel error -stream_loop -1 -i videobg.mp4 -i audio_merged.mp3 -ss 00:00:00 -to {to} -map 0:v -map 1:a -y -c:v libx264 -preset veryfast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour=&H{(request.TextBoxOpacity == null ? "80" : ToHex(request.TextBoxOpacity.Value))}{(request.TextBoxColor == null ? "000000" : request.TextBoxColor.Replace("#", ""))},BorderStyle=4,Fontsize={request.TextFontSize ?? 13},PrimaryColour=&H{(request.TextColor != null ? request.TextColor.Replace("#", "") : "ffffff")}&'\" -codec:a copy final.mp4";
+            var command = $"-hide_banner -loglevel error -stream_loop -1 -i videobg.mp4 -i audio_merged.mp3 -ss 00:00:00 -to {to} -map 0:v -map 1:a -y -c:v libx264 -preset veryfast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour={EncodeBackColor(request.TextBoxColor, request.TextBoxOpacity)},BorderStyle=4,Fontsize={request.TextFontSize ?? 13},PrimaryColour={EncodeTextColor(request.TextColor)}'\" -codec:a copy final.mp4";
             return await ExecuteFfmpeg(command, tempDirectory);
         }
 
@@ -217,6 +217,38 @@ namespace MarsOffice.Tvg.Editor
         {
             var decValue = perc * 255 / 100;
             return decValue.ToString("X");
+        }
+
+        private static string EncodeBackColor(string color, int? opacity)
+        {
+            if (string.IsNullOrEmpty(color))
+            {
+                color = "000000";
+            }
+            else
+            {
+                color = color.Replace("#", "");
+            }
+            if (opacity == null)
+            {
+                opacity = 50;
+            }
+            var bgr = $"{color[4]}{color[5]}{color[2]}{color[3]}{color[0]}{color[1]}";
+            return $"&H{ToHex(100 - opacity.Value)}{bgr}&";
+        }
+
+        private static string EncodeTextColor(string color)
+        {
+            if (string.IsNullOrEmpty(color))
+            {
+                color = "000000";
+            }
+            else
+            {
+                color = color.Replace("#", "");
+            }
+            var bgr = $"{color[4]}{color[5]}{color[2]}{color[3]}{color[0]}{color[1]}";
+            return $"&H{bgr}&";
         }
 
         private async Task<bool> ExecuteFfmpeg(string arguments, string workingDir)
