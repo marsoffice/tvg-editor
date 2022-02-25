@@ -95,6 +95,9 @@ namespace MarsOffice.Tvg.Editor
                 }
 
                 var editorContainerReference = _blobClient.GetContainerReference("editor");
+#if DEBUG
+                await editorContainerReference.CreateIfNotExistsAsync();
+#endif
                 var finalBlobReference = editorContainerReference.GetBlockBlobReference($"{request.VideoId}.mp4");
                 await finalBlobReference.UploadFromFileAsync(tempDirectory + "/final.mp4");
                 finalBlobReference.Metadata.Add("VideoId", request.VideoId);
