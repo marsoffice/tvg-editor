@@ -213,9 +213,9 @@ namespace MarsOffice.Tvg.Editor
             return await ExecuteFfmpeg(command, tempDirectory);
         }
 
-        private static string ToHex(float value)
+        private static string ToHex(double value)
         {
-            var perc = (int)value;
+            var perc = (long)value;
             var decValue = perc * 255 / 100;
             return decValue.ToString("X");
         }

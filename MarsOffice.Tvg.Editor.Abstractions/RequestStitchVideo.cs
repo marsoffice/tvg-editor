@@ -16,13 +16,13 @@ namespace MarsOffice.Tvg.Editor.Abstractions
         public long? FinalFileDurationInMillis { get; set; }
         public bool? TrimGracefullyToMaxDuration { get; set; }
         public string AudioBackgroundFileLink { get; set; }
-        public float? AudioBackgroundVolumeInPercent { get; set; }
+        public double? AudioBackgroundVolumeInPercent { get; set; }
         public string VideoBackgroundFileLink { get; set; }
         public string Resolution { get; set; }
         public string TextFontFamily { get; set; }
-        public float? TextFontSize { get; set; }
+        public double? TextFontSize { get; set; }
         public string TextBoxColor { get; set; }
-        public float? TextBoxOpacity { get; set; }
+        public double? TextBoxOpacity { get; set; }
         public string TextColor { get; set; }
         public string TextBoxBorderColor { get; set; }
     }
