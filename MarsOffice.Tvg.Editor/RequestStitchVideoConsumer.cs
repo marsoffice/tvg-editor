@@ -241,7 +241,7 @@ namespace MarsOffice.Tvg.Editor
         {
             if (string.IsNullOrEmpty(color))
             {
-                color = "000000";
+                color = "ffffff";
             }
             else
             {
