@@ -203,7 +203,7 @@ namespace MarsOffice.Tvg.Editor
                     to = TimeSpan.FromMilliseconds(request.FinalFileDurationInMillis.Value);
                 }
             }
-            var command = $"-hide_banner -loglevel error -stream_loop -1 -i videobg.mp4 -i audio_merged.mp3 -ss 00:00:00 -to {to} -map 0:v -map 1:a -y -c:v libx264 -c:a aac -preset veryfast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour={EncodeBackColor(request.TextBoxColor, request.TextBoxOpacity)},BorderStyle=4,Fontsize={request.TextFontSize ?? 13},PrimaryColour={EncodeTextColor(request.TextColor)}'\" -codec:a copy final.mp4";
+            var command = $"-hide_banner -loglevel error -stream_loop -1 -i videobg.mp4 -i audio_merged.mp3 -ss 00:00:00 -to {to} -map 0:v -map 1:a -y -c:v libx264 -c:a aac -preset veryfast -vf \"subtitles=subs.srt:force_style='Alignment=10,BackColour={EncodeBackColor(request.TextBoxColor, request.TextBoxOpacity)},BorderStyle=4,Fontsize={request.TextFontSize ?? 13},PrimaryColour={EncodeTextColor(request.TextColor)}'\" -codec:a aac final.mp4";
             return await ExecuteFfmpeg(command, tempDirectory);
         }
 
